@@ -10,21 +10,22 @@ module dense_layer #(
     input wire clk,
     input wire rst_n,
     input wire start,
-    input wire [7:0] in_data [INPUT_SIZE-1:0],
-    output reg [31:0] out_data [OUTPUT_SIZE-1:0],
+    input wire [7:0] in_data [0:INPUT_SIZE-1],
+    output reg [31:0] out_data [0:OUTPUT_SIZE-1],
     output reg done
 );
 
     // Weight memory - stores weights as 8-bit signed values
-    reg [7:0] weights [OUTPUT_SIZE-1:0][INPUT_SIZE-1:0];
+    reg [7:0] weights [0:OUTPUT_SIZE-1][0:INPUT_SIZE-1];
     
     // State machine states
     localparam IDLE = 2'b00;
     localparam COMPUTE = 2'b01;
     localparam DONE = 2'b10;
+    localparam INVALID = 2'b11; // Add this to complete case statement
     
     reg [1:0] state;
-    reg [31:0] accumulators [OUTPUT_SIZE-1:0];
+    reg [31:0] accumulators [0:OUTPUT_SIZE-1];
     reg [15:0] input_idx;
     reg [15:0] output_idx;
     
@@ -33,6 +34,8 @@ module dense_layer #(
         $readmemh(WEIGHT_FILE, weights);
     end
     
+    integer i; // Add this for the for loop
+    
     // State machine for matrix-vector multiplication
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -40,7 +43,7 @@ module dense_layer #(
             done <= 1'b0;
             input_idx <= 0;
             output_idx <= 0;
-            for (int i = 0; i < OUTPUT_SIZE; i = i + 1) begin
+            for (i = 0; i < OUTPUT_SIZE; i = i + 1) begin
                 accumulators[i] <= 32'h0;
                 out_data[i] <= 32'h0;
             end
@@ -52,7 +55,7 @@ module dense_layer #(
                         input_idx <= 0;
                         output_idx <= 0;
                         done <= 1'b0;
-                        for (int i = 0; i < OUTPUT_SIZE; i = i + 1) begin
+                        for (i = 0; i < OUTPUT_SIZE; i = i + 1) begin
                             accumulators[i] <= 32'h0;
                         end
                     end
@@ -80,6 +83,11 @@ module dense_layer #(
                 
                 DONE: begin
                     done <= 1'b1;
+                    state <= IDLE;
+                end
+                
+                INVALID: begin
+                    // Handle invalid state
                     state <= IDLE;
                 end
             endcase

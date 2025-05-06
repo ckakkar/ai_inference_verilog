@@ -12,15 +12,17 @@ module top #(
     input wire clk,
     input wire rst_n,
     input wire start,
-    input wire [7:0] in_data [INPUT_SIZE-1:0],
-    output reg [31:0] out_data [OUTPUT_SIZE-1:0],
+    input wire [7:0] in_data [0:INPUT_SIZE-1],
+    output reg [31:0] out_data [0:OUTPUT_SIZE-1],
     output reg done
 );
 
     // Intermediate signals
-    reg [31:0] hidden_out [HIDDEN_SIZE-1:0];
-    reg [31:0] relu_out [HIDDEN_SIZE-1:0];
-    reg hidden_done, relu_done, output_done;
+    wire [31:0] hidden_out [0:HIDDEN_SIZE-1];
+    reg [31:0] relu_out [0:HIDDEN_SIZE-1];
+    reg hidden_done;
+    wire relu_done; // Changed from reg to wire
+    reg output_done;
     
     // State machine states
     localparam IDLE = 2'b00;
@@ -46,19 +48,29 @@ module top #(
     );
     
     // ReLU activation for hidden layer outputs
-    genvar i;
-    generate
-        for (i = 0; i < HIDDEN_SIZE; i = i + 1) begin : relu_units
-            relu_activation relu (
-                .clk(clk),
-                .rst_n(rst_n),
-                .in_data(hidden_out[i]),
-                .valid_in(hidden_done),
-                .out_data(relu_out[i]),
-                .valid_out(relu_done)
-            );
+    // Changed the generate block to avoid array indexing issues
+    integer i;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            for (i = 0; i < HIDDEN_SIZE; i = i + 1) begin
+                relu_out[i] <= 32'h0;
+            end
+        end else if (hidden_done) begin
+            for (i = 0; i < HIDDEN_SIZE; i = i + 1) begin
+                relu_out[i] <= (hidden_out[i][31]) ? 32'h0 : hidden_out[i]; // ReLU function
+            end
         end
-    endgenerate
+    end
+    
+    // Generate relu_done signal
+    reg relu_done_reg;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            relu_done_reg <= 1'b0;
+        else
+            relu_done_reg <= hidden_done; // One cycle delay
+    end
+    assign relu_done = relu_done_reg;
     
     // Dense layer for output layer
     dense_layer #(
@@ -110,6 +122,8 @@ module top #(
                     done <= 1'b1;
                     state <= IDLE;
                 end
+                
+                default: state <= IDLE; // Add default case
             endcase
         end
     end

@@ -16,9 +16,13 @@ CPP_SRCS := $(wildcard $(SIM_DIR)/*.cpp)
 VERILATOR := verilator
 PYTHON := python3
 
-# Verilator flags
-VERILATOR_FLAGS := -Wall --trace -cc --exe
+# Verilator flags - updated for better compatibility
+VERILATOR_FLAGS := -Wall --trace --cc --build
 VERILATOR_INCLUDES := -I$(SRC_DIR) -I$(SIM_DIR)
+CPP_FLAGS := -I$(OBJ_DIR)
+
+# Make sure we can use C++17 features
+CXXFLAGS := -std=c++17
 
 # Default target
 all: verilate train simulate compare
@@ -27,15 +31,14 @@ all: verilate train simulate compare
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-# Verilate the design
-verilate: $(OBJ_DIR)/Vtop
-$(OBJ_DIR)/Vtop: $(VERILOG_SRCS) $(CPP_SRCS) | $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INCLUDES) $(VERILOG_TOP) $(CPP_SRCS) -o Vtop
-	make -C $(OBJ_DIR) -f Vtop.mk Vtop
+# Verilate the design - updated command structure
+verilate: | $(OBJ_DIR)
+	$(VERILATOR) $(VERILATOR_FLAGS) $(VERILATOR_INCLUDES) $(VERILOG_TOP) $(CPP_SRCS)
 
 # Train the model and export weights
 train: | $(BUILD_DIR)
 	mkdir -p $(PY_DIR)
+	mkdir -p weights
 	$(PYTHON) $(PY_DIR)/train_model.py
 
 # Run Python baseline inference
@@ -43,8 +46,8 @@ python_inference:
 	$(PYTHON) $(PY_DIR)/inference.py
 
 # Run Verilog simulation
-simulate: $(OBJ_DIR)/Vtop
-	cd $(OBJ_DIR) && ./Vtop
+simulate: verilate
+	./obj_dir/Vtop
 	@echo "Verilog simulation complete."
 
 # Compare results
@@ -54,9 +57,9 @@ compare:
 # Clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR) $(OBJ_DIR)
-	find $(PY_DIR) -name "*.bin" -delete
-	find . -name "*.txt" -delete
-	find . -name "*.vcd" -delete
-	find . -name "*.png" -delete
+	find $(PY_DIR) -name "*.bin" -delete || true
+	find . -name "*.txt" -delete || true
+	find . -name "*.vcd" -delete || true
+	find . -name "*.png" -delete || true
 
 .PHONY: all verilate train python_inference simulate compare clean
