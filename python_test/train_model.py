@@ -102,14 +102,17 @@ def export_weights(model):
     with open('weights/hidden_weights.txt', 'w') as f:
         for neuron in fc1_weight_scaled:
             for weight in neuron:
-                # Write as 2-digit hex
-                f.write(f'{weight & 0xff:02x} ')
+                # Write as 2-digit hex, handling negative values correctly
+                unsigned_val = (weight if weight >= 0 else weight + 256) & 0xff
+                f.write(f'{unsigned_val:02x} ')
             f.write('\n')
     
     with open('weights/output_weights.txt', 'w') as f:
         for neuron in fc2_weight_scaled:
             for weight in neuron:
-                f.write(f'{weight & 0xff:02x} ')
+                # Write as 2-digit hex, handling negative values correctly
+                unsigned_val = (weight if weight >= 0 else weight + 256) & 0xff
+                f.write(f'{unsigned_val:02x} ')
             f.write('\n')
     
     print("Weights exported to weights/hidden_weights.txt and weights/output_weights.txt")

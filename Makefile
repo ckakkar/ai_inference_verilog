@@ -17,9 +17,9 @@ VERILATOR := verilator
 PYTHON := python3
 
 # Verilator flags - updated for better compatibility
-VERILATOR_FLAGS := -Wall --trace --cc --build
-VERILATOR_INCLUDES := -I$(SRC_DIR) -I$(SIM_DIR)
-CPP_FLAGS := -I$(OBJ_DIR)
+VERILATOR_FLAGS := -Wall --trace --cc --build -Iobj_dir
+VERILATOR_INCLUDES := -I$(SRC_DIR) -I$(SIM_DIR) -I.
+CPP_FLAGS := -I$(OBJ_DIR) -I.
 
 # Make sure we can use C++17 features
 CXXFLAGS := -std=c++17

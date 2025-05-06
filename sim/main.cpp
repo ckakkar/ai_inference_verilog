@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <chrono>
 // Update include paths to look in obj_dir
-#include "../obj_dir/Vtop.h"
+#include "Vtop.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 
